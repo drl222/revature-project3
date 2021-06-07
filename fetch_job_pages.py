@@ -1,6 +1,5 @@
 import boto3
 import re
-import csv
 from pyspark.sql import SparkSession
 from io import BytesIO
 from warcio.archiveiterator import ArchiveIterator
