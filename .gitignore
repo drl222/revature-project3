@@ -1,4 +1,51 @@
 *.class
 *.log
-*.csv
-*.html
+*.zip
+*.gz
+*.jpeg
+*.jpg
+*.png
+*.parquet
+*.iml
+*.ipr
+*.iws
+.idea
+.bsp
+out
+*~
+
+# sbt specific
+.settings/
+.cache/
+.history/
+.lib/
+dist/*
+target/
+bin/
+libexec/
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
+project/*-shim.sbt
+project/project/
+project/target/
+.project
+.classpath
+.cache
+*.tsv
+.bloop/
+.metals/
+.vscode/
+
+# Scala-IDE specific
+.scala_dependencies
+.worksheet
+
+# IntelliJ IDEA specific
+**/.idea/
+**/target/
+**/*.iml
+
+#put keys in it's own package
+/src/main/scala/keys
