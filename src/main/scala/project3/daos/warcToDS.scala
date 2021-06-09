@@ -1,5 +1,6 @@
 package project3.daos
 
+import org.apache.spark.sql.functions.lower
 import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 
 object warcToDS {
@@ -18,12 +19,19 @@ object warcToDS {
     val testRead = spark.read.option("lineSep", "WARC/1.0").textFile(testWarc)
     testRead.printSchema()
     import spark.implicits._
-    testRead.filter(($"value".contains("indeed.com")) &&
-      $"value".contains("software") ||
-      $"value".contains("programmer") ||
-      $"value".contains("developer") ||
-      $"value".contains("engineer") ||
-      $"value".contains("Engineer")
-    )
+    testRead
+      .filter($"value".contains("jobs"))
+      .filter(lower($"value").contains("engineer") ||
+      lower($"value").contains("software") ||
+      lower($"value").contains("computer") ||
+      lower($"value").contains("developer") ||
+      lower($"value").contains("java") ||
+      lower($"value").contains("information technology") ||
+      lower($"value").contains("it specialist") ||
+      lower($"value").contains("tech support") ||
+      lower($"value").contains("technical support") ||
+      lower($"value").contains("network") ||
+      lower($"value").contains("technician") ||
+      lower($"value").contains("analyst"))
   }
 }
