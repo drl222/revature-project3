@@ -1,5 +1,6 @@
 import boto3
 import re
+import json
 from pyspark.sql import SparkSession
 from io import BytesIO
 from warcio.archiveiterator import ArchiveIterator
@@ -9,7 +10,14 @@ from warcio.archiveiterator import ArchiveIterator
 
 bucket_name = 'maria-batch-1005'
 bucket_index_key = 'athena/outputCSV/'
-body_re = re.compile(rb"<body>(.*)</body>", re.DOTALL | re.IGNORECASE)
+search_re = re.compile(rb"<body>(.*)</body>", re.DOTALL | re.IGNORECASE)
+
+company_re = re.compile(r'<h1 class="cmp-section-first-header">(.*?)</h1>')
+entire_posting_re = re.compile(r'<li class="cmp-section cmp-job-entry">(.*?)</li>.+?')
+jobtitle_re = re.compile(r'<h3><a class="cmp-job-url" href=".+?" target=".+?" rel=".+?">(.*?)</a></h3>')
+location_re = re.compile(r'<div class="cmp-note">(.*?)</div>')
+description_re = re.compile(r'<div class="cmp-job-snippet">(.*?)</div>')
+time_re = re.compile(r'<div class="cmp-note cmp-relative-time">(.*?)</div>')
 
 def get_warc_recs(sparkSession):
 	"""yields a warc index file from S3 as a list of dicts
@@ -19,7 +27,6 @@ def get_warc_recs(sparkSession):
 
 	for obj in bucket.objects.filter(Delimiter='/', Prefix=bucket_index_key):
 		if obj.key.endswith(".csv"):
-			print(obj.key)
 			print("s3a://" + bucket_name + "/" + obj.key)
 
 			sqldf = sparkSession.read.format("csv").option("header",True) \
@@ -40,23 +47,60 @@ def fetch_process_warc_records(rows):
 		record_stream = BytesIO(response["Body"].read())
 
 		for record in ArchiveIterator(record_stream):
-			page = record.content_stream().read()
+			page = record.content_stream().read().decode('utf-8')
 
 			# HERE IS WHERE YOUR PROCESSING LOGIC GOES
-			match_object = body_re.search(page)
-			if(match_object):
-				yield match_object.group(1)
+			# match_object = search_re.search(page)
+			# if(match_object):
+				# yield match_object.group(1)
+			yield find_postings_in_page(page)
 			# do nothing if failure
+
+def find_postings_in_page(fulltext):
+	company = company_re.search(fulltext)
+	list_to_return = []
+	company_name = None
+
+	if company:
+		company_name = company.group(1)
+
+		for this_li in entire_posting_re.finditer(fulltext):
+			try:
+				entire_posting = this_li.group(1)
+				jobtitle = jobtitle_re.search(entire_posting)
+				description = description_re.search(entire_posting)
+				location = location_re.search(entire_posting)
+				time = time_re.search(entire_posting)
+
+				list_to_return.append({
+					"jobtitle": jobtitle.group(1),
+					"description": description.group(1),
+					"location": location.group(1),
+					"time": time.group(1)
+					})
+				print(jobtitle.group(1))
+			except AttributeError:
+				print("Error while matching regex")
+	return (company_name, list_to_return)
 
 if __name__ == '__main__':
 	print("starting...")
 	sparkSession = SparkSession.builder.appName('RevatureProject3').getOrCreate()
+	print()
 	try:
+		final_table = []
 		for warc_recs in get_warc_recs(sparkSession):
-			for i in warc_recs.mapPartitions(fetch_process_warc_records).collect():
+			print(warc_recs)
+			for i, process_output in enumerate(warc_recs.mapPartitions(fetch_process_warc_records).collect()):
 				# post-processing, like saving to file or printing to screen
-				print("\n\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\n\n")
-				print(i)
+				# print("\n\nXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+				# print(i)
+				final_table.append(process_output)
+				# with open(f'{i}.html', 'wb') as f:
+				# 	f.write(myBytes)
 	finally:
+		print(final_table)
+		with open('processed_job_listings.json', 'w', encoding='utf-8') as f:
+			json.dump(final_table, f)
 		sparkSession.stop()
 	print("done!")
