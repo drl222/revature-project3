@@ -1,4 +1,7 @@
 //Hey can someone make an Object File for me, and paste this content into it? It is my contribution so far to Q4.
+//This one is for the main, please note that the collect method at the end takes up most of the time, so perhaps if we
+//  redirect the content to a file instead of printing it to the console, it may take less time for the program to run
+//  overall.
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.apache.spark.sql.functions.{col, count, desc, length, lit, slice, to_date, trim, udf}
 import org.apache.spark.sql.types._
