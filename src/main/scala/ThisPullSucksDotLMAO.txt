@@ -16,8 +16,8 @@ object ProblemFour {
     val spark: SparkSession = SparkSession.builder()
       .master("local[*]")
       .appName("Job Posting Trends")
-      .config("fs.s3a.access.key", "AKIA4OK5FKIY7JBD5XWZ")
-      .config("fs.s3a.secret.key", "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")
+      .config("fs.s3a.access.key", "Hey, remember Start Wars?")
+      .config("fs.s3a.secret.key", "Oh yeah, I love Star Wars")
       .getOrCreate()
     import spark.implicits._
     spark.sparkContext.setLogLevel("WARN")
