@@ -10,3 +10,9 @@ Initial TODO
 	- Francisco
 - Organize ourselves into teams for MVPs
 	- 
+
+- What are the three companies posting the most tech job ads
+- What percentage of entry level tech jobs require previous experience?
+- Is there a significant spike in tech job postings at the end of business quarters?
+If so, which quarter spikes the most?
+- Graphical Display of Data for Presentation
