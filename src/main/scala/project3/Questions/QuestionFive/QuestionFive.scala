@@ -1,55 +1,48 @@
 package project3.Questions.QuestionFive
 
-import org.apache.spark.sql.functions.{col, lower, trunc}
+import org.apache.spark.sql.functions.{col, date_format, round}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import project3.daos.warcToDS.warcToDS
+
 
 object QuestionFive {
   //What percent of tech job posters post no more than three job ads a month?
   def questionFive (spark : SparkSession, commonCrawlDF : DataFrame) : Unit = {
 
-    //Make a different object that allows me to get a warc.gz, the one below I got through Athena query.
-    //s3a://commoncrawl/crawl-data/CC-MAIN-2018-05/segments/1516084891316.80/warc/CC-MAIN-20180122113633-20180122133633-00510.warc.gz
+    //Create a DF based of the Athena query that gives the url_host_name, url_path_count, and timestamp (divided by months)
+    val jobCountDF = {
+      spark.read
+        .option("inferSchema", "true")
+        .option("header", true)
+        .format("csv")
+        .load("src/main/scala/project3/Questions/QuestionFive/JobCountPerMonth_2020.csv")
+    }
+    //git jobCountDF.show(1000, false)
 
-    import spark.implicits._
-    //val testWarc = "s3a://commoncrawl/crawl-data/CC-MAIN-2018-05/segments/1516084891316.80/warc/CC-MAIN-20180122113633-20180122133633-00510.warc.gz"
-    val testWarc = "s3a://commoncrawl/crawl-data/CC-MAIN-2018-05/segments/1516084888077.41/warc/CC-MAIN-20180119164824-20180119184824-00514.warc.gz"
-    //
+    jobCountDF.createOrReplaceTempView("vJobCountView")
 
-    val crawl = "CC-MAIN-2018-05"
-    val indeedJobWarc = commonCrawlDF
-      //trunc(col("fetch_time"),"Month").as("Month_Trunc")
-      //.select("url", "warc_filename")
-      .select($"url",$"warc_filename", $"fetch_time") //only does the first row :( trunc(col("fetch_time"),"Month").as("Month_Trunc"))
-      .filter($"crawl" === crawl)
-      .filter($"subset" === "warc")
-      .filter($"url_host_tld" === "com")
-      .filter($"url_host_registered_domain" === "indeed.com")
-      .filter($"url".contains("indeed.com/cmp/"))
-      .filter(lower($"url_path").contains("jobs"))
-      .filter(lower($"url_path").contains("programmer") ||
-        lower($"url_path").contains("engineer") ||
-        lower($"url_path").contains("software") ||
-        lower($"url_path").contains("computer") ||
-        lower($"url_path").contains("developer") ||
-        lower($"url_path").contains("java") ||
-        lower($"url_path").contains("information technology") ||
-        lower($"url_path").contains("it specialist") ||
-        lower($"url_path").contains("tech support") ||
-        lower($"url_path").contains("technical support") ||
-        lower($"url_path").contains("network") ||
-        lower($"url_path").contains("technician") ||
-        lower($"url_path").contains("analyst"))
-      .limit(100)
+    val jobCount = spark.sql(
+      """
+        |SELECT
+        |count(case WHEN url_path_count <= 3 THEN 1 else null end) as threeOrLess,
+        |count(case WHEN url_path_count > 3 THEN 1 else null end) as greaterThan3,
+        |month_time
+        |FROM vJobCountView
+        |GROUP BY month_time
+        |ORDER BY month_time
+        |""".stripMargin
+    )
 
-    //indeedJobWarc.show(100, false)
-
-    //test sirius-computer-solutions
-    // crawl-data/CC-MAIN-2018-05/segments/1516084888077.41/warc/CC-MAIN-20180119164824-20180119184824-00514.warc.gz
-    //Test warc file into a CSV
-    warcToDS(spark, testWarc)
-      .filter($"value".contains("indeed.com/cmp/"))
-      .write.csv("hdfs://localhost:9000/user/arielrubio/commoncrawl/warc6.csv")
-
+    //Format the time to MMMM yyyy
+    //Turn the columns threeOrLess and greaterThan3 into percentages
+    val jobCountv2 = jobCount
+      .withColumn("a", col("threeOrLess") /(col("threeOrLess") + col("greaterThan3")))
+      .withColumn("b", col("greaterThan3") /(col("threeOrLess") + col("greaterThan3")))
+    val jobCountv3 = jobCountv2.select(
+      round(col("a"), 5).as("Three Jobs or Less"),
+      round(col("b"), 5).as("Greater Than Three Jobs"),
+      date_format(col("month_time"), "MMMM yyyy").as("Month")
+    )
+    jobCountv3.show()
   }
+
 }

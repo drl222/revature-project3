@@ -1,17 +1,26 @@
-SELECT url, warc_filename, warc_record_offset, warc_record_length, warc_segment
+SELECT url_host_name, count(url_path) as url_path_count, date_trunc('month', fetch_time) as month_time
 FROM "ccindex"."ccindex"
-WHERE crawl = 'CC-MAIN-2018-05'
+WHERE crawl LIKE '%CC-MAIN-2020%'
   AND subset = 'warc'
   AND url_host_tld = 'com'
-  AND url_host_registered_domain = 'indeed.com'
-  AND lower(url_path) LIKE '%jobs%'
-  AND lower(url) NOT LIKE '%ca.indeed.com%'
-  AND lower(url) LIKE '%indeed.com/cmp/%'
+  AND fetch_status = 200
+  AND url_protocol = 'https'
+  AND content_languages = 'eng'
+  AND (lower(url_path) LIKE '%job%' or lower(url_path) LIKE '%career%')
   AND (lower(url_path) LIKE '%programmer%' or
        lower(url_path) LIKE '%engineer%' or
        lower(url_path) LIKE '%software%' or
        lower(url_path) LIKE '%computer%' or
        lower(url_path) LIKE '%developer%' or
-       lower(url_path) LIKE '%java%'
+       lower(url_path) LIKE '%java%' or
+       lower(url_path) LIKE '%python%' or
+       lower(url_path) LIKE '%scala%' or
+       lower(url_path) LIKE '%tech support%' or
+       lower(url_path) LIKE '%network%' or
+       lower(url_path) LIKE '%analyst%' or
+       lower(url_path) LIKE '%big data%' or
+       lower(url_path) LIKE '%it specialist%' or
+       lower(url_path) LIKE '%technician%' or
+       lower(url_path) LIKE '%information technology%'
       )
-LIMIT 20
+GROUP BY url_host_name, date_trunc('month', fetch_time) order by url_host_name limit 2000000;
