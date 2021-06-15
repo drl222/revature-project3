@@ -1,0 +1,94 @@
+//Hey can someone make an Object File for me, and paste this content into it? It is my contribution so far to Q4.
+//This one is for the main, please note that the collect method at the end takes up most of the time, so perhaps if we
+//  redirect the content to a file instead of printing it to the console, it may take less time for the program to run
+//  overall.
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.sql.functions.{col, count, desc, length, lit, slice, to_date, trim, udf}
+import org.apache.spark.sql.types._
+import org.apache.commons.io.input.BoundedInputStream
+
+import java.io.{BufferedInputStream, FileInputStream}
+import java.net.URL
+import java.sql.Timestamp
+
+object ProblemFour {
+  def main(args: Array[String]): Unit = {
+    val spark: SparkSession = SparkSession.builder()
+      .master("local[*]")
+      .appName("Job Posting Trends")
+      .config("fs.s3a.access.key", "Hey, remember Start Wars?")
+      .config("fs.s3a.secret.key", "Oh yeah, I love Star Wars")
+      .getOrCreate()
+    import spark.implicits._
+    spark.sparkContext.setLogLevel("WARN")
+
+    // Contingent Connection Syntax
+    // spark.sparkContext.hadoopConfiguration.set("fs.s3a.access.key", "AKIA4OK5FKIY7JBD5XWZ")
+    // spark.sparkContext.hadoopConfiguration.set("fs.s3a.secret.key", "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")x1
+
+    // Utility Constants
+    val saveTo = "s3a://maria-batch-1005/testDumpWrite/ProblemThree/" // S3 Directory to save Output to
+    val localHDFS = "hdfs://localhost:9000/user/georgefk/" // my local directory to see whether I can save documents on my machine (correct syntax)
+    //val webSrc = "https://commoncrawl.s3.amazonaws.com//crawl-data/" // WARC Web Directory
+    val genSrc = "s3a://commoncrawl/cc-index/table/cc-main/warc/" // WARC S3 Bucket Directory
+
+    // Program Constants
+    val sampleWARC = "CC-MAIN-2020-05"
+    val structWARC: Seq[String] = Seq("CC-MAIN-2020-01", "CC-MAIN-2020-02", "CC-MAIN-2020-03", "CC-MAIN-2020-04", "CC-MAIN-2020-05")
+    val outputSchema: StructType = StructType(StructField("Test_Count", IntegerType, nullable = false) :: // first column tbd
+      Nil) // End of Structure, may add more or less
+
+    try {
+      //'try' to execute the data reads ...
+      dataMay21(sampleWARC, 1) //so far, it is fine
+    }
+    catch {
+      // ... 'catch' any mistakes ...
+      case e: Exception => println("Error" + e.getMessage)
+    }
+    finally {
+      // ... end the spark session, no matter what
+      spark.close()
+    }
+
+
+    // Read data for job trends for the last month of May 2021
+    def dataMay21(crawl: String, siteCap:Int): Unit = {
+      // 'crawl' is this:   "CC-MAIN-2020-05"
+      // 'genSrc' is this:    "s3a://commoncrawl/cc-index/table/cc-main/warc/"
+      val dataDF = spark.read.option("inferSchema", "true").option("header", true).load(genSrc)  //load in the common crawl from bucket
+      val dataTrim = dataDF.select($"url", $"warc_filename") //get (1) site source, (2) warc file source, (3)
+        .filter($"subset"==="warc")
+        .filter($"crawl" === crawl)
+        .filter($"fetch_status" === 200) // Filter on HTTP status code 'success'
+        .filter($"url_path".contains("job")) // Filter on full URL path containing the word 'job'
+        .limit(siteCap)
+      println("we got part one just fine.")
+      val dataBundle = dataTrim.collect
+      dataBundle.foreach{x =>
+        val byteFile = spark.read.option("lineSep", "WARC/1.0").text("s3a://commoncrawl/"+x(1)).toDF("WARC Bulk")//WARC file containing target
+        val warcSlicer = udf((warcBulk:String) => if (warcBulk.contains("<!DOCTYPE")) warcBulk.slice(warcBulk.indexOf("<!DOCTYPE"), warcBulk.length) else null) // warcBulk
+        val htmlExtract = byteFile.filter($"WARC Bulk".contains(x(0))).withColumn("HTML Extract", warcSlicer(trim(col("WARC Bulk")))).drop("WARC Bulk")
+        val htmlClean = htmlExtract.na.drop.rdd
+        if (htmlClean.isEmpty())
+        {
+          println("A fault in the cracks - HTML Document Failed to load")
+        }
+        else
+        {
+          println(s"${htmlClean.collect.mkString}")
+        }
+        /*
+        TODO:
+          1. Extract the byte sequence from the 'byteFile' bound by 'startSeq' and 'endSeq' - done
+          2. Filter content to isolate target parameters - does nto know what parameters to filter for
+          3. Arithmetic - do local accumulators to log desired results, such that I can save the content as a row entity in a file
+          4. Save Output logs to File - append target file with row entity whose parameters contain arithmetic calculated previously
+
+         */
+
+      }
+    }
+
+  }
+}
