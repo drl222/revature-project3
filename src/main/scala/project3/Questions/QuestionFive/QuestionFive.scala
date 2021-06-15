@@ -38,11 +38,15 @@ object QuestionFive {
       .withColumn("a", col("threeOrLess") /(col("threeOrLess") + col("greaterThan3")))
       .withColumn("b", col("greaterThan3") /(col("threeOrLess") + col("greaterThan3")))
     val jobCountv3 = jobCountv2.select(
-      round(col("a"), 5).as("Three Jobs or Less"),
-      round(col("b"), 5).as("Greater Than Three Jobs"),
+      round(col("a"), 2).as("Three Jobs or Less"),
+      round(col("b"), 2).as("Greater Than Three Jobs"),
       date_format(col("month_time"), "MMMM yyyy").as("Month")
     )
-    jobCountv3.show()
+    jobCountv3.createOrReplaceTempView("jobs")
+
+    spark.sql("create or replace TEMPORARY  view fixdata as select `Three Jobs or Less` *100 as `three jobs or less`, `Greater Than Three Jobs` *100 as `Greater Than Three Jobs`, Month from jobs")
+    spark.sql("select `Three Jobs or Less`, Round(`Greater Than Three Jobs`, 2), Month from fixdata").show
+
   }
 
 }

@@ -13,7 +13,11 @@ libraryDependencies += "org.apache.hadoop" % "hadoop-client" % "2.10.1"
 libraryDependencies += "org.apache.hadoop" % "hadoop-aws" % "2.10.1"
 
 // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-core
-libraryDependencies += "com.amazonaws" % "aws-java-sdk-core" % "1.12.5"
+
 
 // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-emr
 //libraryDependencies += "com.amazon" % "aws-java-sdk-emr" % "1.12.5"
+
+libraryDependencies += "com.amazonaws" % "aws-java-sdk" % "1.11.970"
+
+libraryDependencies += "com.amazonaws" % "aws-java-sdk-emr" % "1.11.970"
