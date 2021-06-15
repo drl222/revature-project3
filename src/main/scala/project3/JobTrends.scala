@@ -7,7 +7,8 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.types._
 
 import java.util.zip.GZIPInputStream
-class JobTrends {
+
+object JobTrends {
   def main(args: Array[String]): Unit = {
     val spark: SparkSession = SparkSession.builder()
       .master("local[*]")
