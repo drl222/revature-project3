@@ -8,7 +8,6 @@ import com.amazonaws.services.s3.model.GetObjectRequest
 import java.nio.charset.Charset
 import java.nio.charset.CharsetDecoder
 import java.nio.charset.CodingErrorAction
-
 import keys.keys
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.functions.lower
@@ -24,8 +23,8 @@ object Runner {
       .builder()
       .master("local[*]")
       .appName("commoncrawl demo")
-      .config("spark.hadoop.fs.s3a.access.key", keys.AccessKey)
-      .config("spark.hadoop.fs.s3a.secret.key", keys.SecretKey)
+      .config("spark.hadoop.fs.s3a.access.key", keys.keys.AccessKey)
+      .config("spark.hadoop.fs.s3a.secret.key", keys.keys.SecretKey)
       .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
       .config("spark.hadoop.fs.s3a.multiobjectdelete.enable","false")
       .config("spark.hadoop.fs.s3a.fast.upload","true")
@@ -45,7 +44,7 @@ object Runner {
     //Amazon S3 Setup
     var s3Client: AmazonS3 = null;
     if(!RUN_ON_EMR){
-      val s3Creds = new BasicAWSCredentials(keys.AccessKey, keys.SecretKey)
+      val s3Creds = new BasicAWSCredentials(keys.keys.AccessKey, keys.keys.SecretKey)
       s3Client =
         AmazonS3ClientBuilder
           .standard()
