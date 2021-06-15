@@ -41,7 +41,7 @@ object Runner {
       .load("s3a://commoncrawl/cc-index/table/cc-main/warc/")
 
     //s3a://maria-batch-1005/athena/
-
+    Questions.QuestionFive.QuestionFive.questionFive(spark, commonCrawlDF)
     //Amazon S3 Setup
     var s3Client: AmazonS3 = null;
     if(!RUN_ON_EMR){
@@ -91,11 +91,11 @@ object Runner {
         .take(10)
         .toList
 
-    warcFilesInfo.foreach(
-      warcFile => {
-        val warcContent: String = getContentFromS3Object(warcFile._1, warcFile._2, warcFile._3, s3Client)
-        println(" NEWWWWW  WARC CONTENT")
-        println(warcContent)
+    //warcFilesInfo.foreach(
+      //warcFile => {
+       // val warcContent: String = getContentFromS3Object(warcFile._1, warcFile._2, warcFile._3, s3Client)
+        //println(" NEWWWWW  WARC CONTENT")
+       // println(warcContent)
 
         /**
         var wetExtracts =
@@ -119,8 +119,8 @@ object Runner {
             )
         wetExtracts.take(10).foreach(println)
          **/
-      }
-    )
+     // }
+   // )
 
     /**
      * getContentFromS3Object utilizes the Amazon S3 Java API to specifically traverse the Common Crawl Index by
