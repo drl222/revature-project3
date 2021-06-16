@@ -13,8 +13,8 @@ object JobTrends {
     val spark: SparkSession = SparkSession.builder()
       .master("local[*]")
       .appName("Job Posting Trends")
-      .config("fs.s3a.access.key", "AKIA4OK5FKIY5TZ3JJ7I")
-      .config("fs.s3a.secret.key", "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")
+      .config("fs.s3a.access.key", "ooops")
+      .config("fs.s3a.secret.key", "uwu xd")
       .getOrCreate()
     import spark.implicits._
     spark.sparkContext.setLogLevel("WARN")
