@@ -14,6 +14,7 @@
 ## SCALA (Spark)
 - TODO: read in the HTML code from S3 or however else we're passing the HTML code
 - TODO: actually run our analyses
+- 
 
 # Environment Setup
 - Have Python 3 installed (I'm using 3.8.5, which came default with WSL)
@@ -38,3 +39,16 @@ export AWS_ACCESS_KEY_ID=xxxxxxx
 export AWS_SECRET_ACCESS_KEY=xxxxxxxx
 ```
 - Everything is now set up. You should be able to run `python3 fetch_job_pages.py` (or `python` instead of `python3` depending on how it's set up on your computer)
+
+# Keys Package
+- keys is a part of the git ignore but you will need to add the package yourself when cloning the project.
+- under src/main/scala create a new package called 'keys' within that package make a new Scala Object also called 'keys'
+- within that object at the following:
+```
+package keys
+
+object keys {
+  final val AccessKey = "replace_with_key"
+  final val SecretKey = "replace_with_key"
+}
+```
