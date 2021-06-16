@@ -14,7 +14,7 @@ object JobTrends {
       .master("local[*]")
       .appName("Job Posting Trends")
       .config("fs.s3a.access.key", "ooops")
-      .config("fs.s3a.secret.key", "uwu xd")
+      .config("fs.s3a.secret.key", "uwu my bad")
       .getOrCreate()
     import spark.implicits._
     spark.sparkContext.setLogLevel("WARN")
