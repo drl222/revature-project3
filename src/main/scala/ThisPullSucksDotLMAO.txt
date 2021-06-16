@@ -22,10 +22,6 @@ object ProblemFour {
     import spark.implicits._
     spark.sparkContext.setLogLevel("WARN")
 
-    // Contingent Connection Syntax
-    // spark.sparkContext.hadoopConfiguration.set("fs.s3a.access.key", "AKIA4OK5FKIY7JBD5XWZ")
-    // spark.sparkContext.hadoopConfiguration.set("fs.s3a.secret.key", "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")x1
-
     // Utility Constants
     val saveTo = "s3a://maria-batch-1005/testDumpWrite/ProblemThree/" // S3 Directory to save Output to
     val localHDFS = "hdfs://localhost:9000/user/georgefk/" // my local directory to see whether I can save documents on my machine (correct syntax)
