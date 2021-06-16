@@ -43,7 +43,7 @@ export AWS_SECRET_ACCESS_KEY=xxxxxxxx
 # Keys Package
 - keys is a part of the git ignore but you will need to add the package yourself when cloning the project.
 - under src/main/scala create a new package called 'keys' within that package make a new Scala Object also called 'keys'
-- within that object at the following:
+- within that object add the following:
 ```
 package keys
 
