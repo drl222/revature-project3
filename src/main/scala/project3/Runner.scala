@@ -3,7 +3,7 @@ package project3
 
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
-import com.amazonaws.services.s3.model.GetObjectRequest
+import com.amazonaws.services.s3.model.{GetObjectRequest, S3ObjectInputStream}
 
 import java.nio.charset.Charset
 import java.nio.charset.CharsetDecoder
@@ -11,55 +11,41 @@ import java.nio.charset.CodingErrorAction
 import keys.keys
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.functions.lower
-import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
+import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType}
 
 import java.util.zip.GZIPInputStream
 
 
 object Runner {
-  final val RUN_ON_EMR = false;
-
-
-
-    val s3Creds = new BasicAWSCredentials(keys.AccessKey, keys.SecretKey)
-    val s3Client =
-      AmazonS3ClientBuilder
-        .standard()
-        .withCredentials(new AWSStaticCredentialsProvider(s3Creds))
-        .withRegion("us-east-1")
-        .build()
+  final val RUN_ON_EMR = false
 
   def main(args: Array[String]): Unit = {
     val spark:SparkSession = SparkSession
       .builder()
-      .master("local[*]")
-      .appName("commoncrawl demo")
-      .config("spark.hadoop.fs.s3a.access.key", keys.AccessKey)
-      .config("spark.hadoop.fs.s3a.secret.key", keys.SecretKey)
-      .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-      .config("spark.hadoop.fs.s3a.multiobjectdelete.enable","false")
-      .config("spark.hadoop.fs.s3a.fast.upload","true")
-      .config("spark.hadoop.fs.s3a.endpoint", "s3.amazonaws.com")
+      //.master("local[*]")
+      .appName("francisco extract")
+      //.config("spark.hadoop.fs.s3a.access.key", keys.AccessKey)
+      //.config("spark.hadoop.fs.s3a.secret.key", keys.SecretKey)
+      //.config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+      //.config("spark.hadoop.fs.s3a.multiobjectdelete.enable","false")
+      //.config("spark.hadoop.fs.s3a.fast.upload","true")
+      //.config("spark.hadoop.fs.s3a.endpoint", "s3.amazonaws.com")
       .getOrCreate()
 
     import spark.implicits._
     spark.sparkContext.setLogLevel("WARN")
 
     /**
+
     val commonCrawlDF = spark.read
       .option("inferSchema", "true")
       .option("header", true)
       .load("s3a://commoncrawl/cc-index/table/cc-main/warc/")
-    **/
-    //s3a://maria-batch-1005/athena/
-
-    //Amazon S3 Setup
 
     val s3OutputBucket = "s3a://franciscotest/"
     val crawl = "CC-MAIN-2021-21"
     val subset = "warc"
 
-    /**
     //"crawl-data/CC-MAIN-2018-09/segments/1518891812584.40/warc/CC-MAIN-20180219111908-20180219131908-00636.warc.gz"
     val jobDomainList = List[String]("indeed.com")
     val filteredCommonCrawlDF = commonCrawlDF
@@ -88,29 +74,29 @@ object Runner {
       .limit(5)
     **/
 
-    //filteredCommonCrawlDF.show(2,false)
     val  customSchema = StructType(
       Seq(
-        StructField("index", LongType, true),
         StructField("warc_filename", StringType, true),
-        StructField("warc_record_offset", LongType, true),
-        StructField("warc_record_length", LongType, true),
+        StructField("warc_record_offset", IntegerType, true),
+        StructField("warc_record_length", IntegerType, true),
         StructField("timestamp", StringType, true),
         StructField("url", StringType, true)
       )
     )
+    //s3a://maria-batch-1005/athena/small-testing/indeed_sample.txt
     val filteredCommonCrawlDF =
-      spark.read.format("csv")
-        .option("delimiter", "\t")
+      spark.read.format("parquet")
         .schema(customSchema)
-        .load("s3a://maria-batch-1005/athena/small-testing/indeed_sample.txt")
+        .load("s3://maria-batch-1005/large_test")
 
     filteredCommonCrawlDF.show(false)
+
 
     val warcFilesInfo =
       filteredCommonCrawlDF
         .select("warc_filename", "warc_record_offset", "warc_record_length")
-        .map(row=> (row.getString(0), row.getLong(1), row.getLong(2)))
+
+    warcFilesInfo.show()
 
     val company_re = "<span class=\"company\">(.*?)</span>".r
     val jobtitle_re = "<b class=\"jobtitle\"><font size=\"\\+1\">(.*?)</font></b>".r
@@ -121,9 +107,7 @@ object Runner {
 
     val dataRetrievalDF = warcFilesInfo.map(
       warcRow => {
-        val warcContent: String = getContentFromS3Object(warcRow._1, warcRow._2, warcRow._3)
-        println(" NEWWWWW  WARC CONTENT")
-        //println(warcContent)
+        val warcContent: String = S3Serializable.getContentFromS3Object(warcRow.getString(0), warcRow.getInt(1), warcRow.getInt(2))
 
         var company = ""
         company_re.findFirstMatchIn(warcContent) match {
@@ -172,12 +156,43 @@ object Runner {
           }
         }
 
+
         (company,jobTitle, description, location, time)
+
       }
     )
     dataRetrievalDF.show(false)
+    dataRetrievalDF.write.mode("overwrite").csv("s3a://maria-batch-1005/Project3Output2/")
     spark.close()
+
   }
+
+
+
+  /**
+   * Converts the warc filename path to a wet filename path
+   * @param filename = warc filename path excluding root object
+   * @return = String of wet file name path
+   */
+  def getWetFilename(filename: String):String = {
+    filename.replace("/warc/", "/wet/").replace("warc.gz", "warc.wet.gz")
+  }
+
+
+} //end runner
+
+
+
+//to make it Serializable for the Worker Nodes when in Cluster Distributive Environment by making it static
+//https://www.nicolaferraro.me/2016/02/22/using-non-serializable-objects-in-apache-spark/
+object S3Serializable {
+  val s3Creds = new BasicAWSCredentials(keys.AccessKey, keys.SecretKey)
+  val s3Client =
+    AmazonS3ClientBuilder
+      .standard()
+      .withCredentials(new AWSStaticCredentialsProvider(s3Creds))
+      .withRegion("us-east-1")
+      .build()
 
   /**
    * getContentFromS3Object utilizes the Amazon S3 Java API to specifically traverse the Common Crawl Index by
@@ -186,13 +201,12 @@ object Runner {
    * @param filename = the filename path excluding the root bucket
    * @param fileOffset = the respective file offset for fileName
    * @param fileLength = the respective file length for fileName
-   * @param s3Client = the Amazon S3 Client object containing credentials
    * @return = a String of the entire content of the fileName
    */
   def getContentFromS3Object(filename: String, fileOffset: Long, fileLength: Long): String = {
     //https://stackoverflow.com/questions/24537884/how-to-get-first-n-bytes-of-file-from-s3-url
     //https://stackoverflow.com/questions/13625024/how-to-read-a-text-file-with-mixed-encodings-in-scala-or-java
-
+    val s3Client = S3Serializable.s3Client
     //make a request to get the file from commoncrawl
     val request = new GetObjectRequest("commoncrawl",filename)
     //set the specific page within the warc file
@@ -213,14 +227,5 @@ object Runner {
     warcContent
   }
 
-  /**
-   * Converts the warc filename path to a wet filename path
-   * @param filename = warc filename path excluding root object
-   * @return = String of wet file name path
-   */
-  def getWetFilename(filename: String):String = {
-    filename.replace("/warc/", "/wet/").replace("warc.gz", "warc.wet.gz")
-  }
-
-
 }
+
