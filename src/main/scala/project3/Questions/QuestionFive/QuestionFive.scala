@@ -62,7 +62,7 @@ object QuestionFive {
     jobCountv3.createOrReplaceTempView("jobs")
 
     spark.sql("create or replace TEMPORARY  view fixdata as select `Three Jobs or Less` *100 as `three jobs or less`, `Greater Than Three Jobs` *100 as `Greater Than Three Jobs`, Month from jobs")
-    val d = spark.sql("select `Three Jobs or Less`, Round(`Greater Than Three Jobs`, 2), Month from fixdata")
+    val d = spark.sql("select `Three Jobs or Less`, Round(`Greater Than Three Jobs`, 2), Month from fixdata").show()
     //d.coalesce(1).write.format("csv").option("header", true).mode(SaveMode.Overwrite).save("hdfs://localhost:9000/user/project2/output1.csv")
   }
 
