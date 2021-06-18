@@ -10,8 +10,8 @@ import java.nio.charset.CharsetDecoder
 import java.nio.charset.CodingErrorAction
 import keys.keys
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.sql.functions.lower
-import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType}
+import org.apache.spark.sql.functions.{lower, when}
+import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType, TimestampType}
 
 import java.util.zip.GZIPInputStream
 
@@ -73,96 +73,162 @@ object Runner {
       .select("url","url_path","warc_filename", "warc_record_offset", "warc_record_length")
       .limit(5)
     **/
-
+    /**
     val  customSchema = StructType(
       Seq(
         StructField("warc_filename", StringType, true),
         StructField("warc_record_offset", IntegerType, true),
         StructField("warc_record_length", IntegerType, true),
-        StructField("timestamp", StringType, true),
+        StructField("timestamp", TimestampType, true),
         StructField("url", StringType, true)
       )
-    )
+    ) **/
     //s3a://maria-batch-1005/athena/small-testing/indeed_sample.txt
-    val filteredCommonCrawlDF =
+    //s3a://maria-batch-1005/large_test
+    // s3a://maria-batch-1005/test_2015_2021
+    /**
+    val filteredCommonCrawlDF = {
       spark.read.format("parquet")
         .schema(customSchema)
-        .load("s3://maria-batch-1005/large_test")
+        .load("s3a://maria-batch-1005/large_test")
 
-    filteredCommonCrawlDF.show(false)
+    } **/
+
+
+    val filteredCommonCrawlDF = spark.read.format("parquet").option("inferschema","true").load("s3a://maria-batch-1005/test_2015_2021")
+
+    //filteredCommonCrawlDF.show(false)
 
 
     val warcFilesInfo =
       filteredCommonCrawlDF
         .select("warc_filename", "warc_record_offset", "warc_record_length")
 
-    warcFilesInfo.show()
+   // warcFilesInfo.show()
 
-    val company_re = "<span class=\"company\">(.*?)</span>".r
-    val jobtitle_re = "<b class=\"jobtitle\"><font size=\"\\+1\">(.*?)</font></b>".r
-    val location_re = "<span class=\"location\">(.*?)</span>".r
-    val description_re = "<span id=\"job_summary\" class=\"summary\">(.*?)</span>".r
-    val time_re = "<span class=\"date\">(.*?)</span>".r
-    println("starting nest")
+
+    //(?s) in regex allows the regex to include newlines in the . operator e.g:(.*? will include newlines now)
+    //<.*? =\"date\" .*? >(.*>)<.*?>
+    val company_re = "(?s)<.*?=\"[cC]ompany(?:[nN]ame)?\".*?>(.*?)</.*?>".r
+    val companyInner_re = "(?s)(?:<.*>)\\s*(.*)".r
+    val jobtitle_re = "(?s)<.*?=\"[jJ]ob[tT]itle\">(.*?)</.*?>".r
+    val jobtitleInner_re = "(?s)(?:<.* title=\"(.*?)\".*>)".r
+    val location_re = "(?s)<.*?=\"location\">(.*?)</.*?>".r
+    val description_re = "(?s)(?:<.*?=\"job_summary\" class=\"summary\">(.*?)</.*?>)|(?:<div id=\"jobDescriptionText\" class=\"jobsearch-jobDescriptionText\">(.*?)</div>)".r
+    val time_re = "(?s)(?:<span class=\"date\">(.*?)</span>)|(?:<div class=\"jobsearch-JobMetadataFooter\">\\s*<div>(.*?)</div>)|(?:<span class=\"old-date\">(.*?)</span>)".r
+    val experience_re = "(?s)([0-9]+)\\+? [Yy]ears? ?.*? [Ee]xperience".r
+    val entryLevel_re = "(?s)[eE]ntry".r
 
     val dataRetrievalDF = warcFilesInfo.map(
       warcRow => {
         val warcContent: String = S3Serializable.getContentFromS3Object(warcRow.getString(0), warcRow.getInt(1), warcRow.getInt(2))
-
         var company = ""
-        company_re.findFirstMatchIn(warcContent) match {
-          case Some(value) => company = value.group(1)
-          case None => {
-            company = "N/A"
-            println("No Company Found")
-          }
-        }
-
         var jobTitle = ""
         var description = ""
         var location = ""
         var time = ""
+        var experience = ""
+        var entryLevel = false
 
+        company_re.findFirstMatchIn(warcContent) match {
+          case Some(value) => {
+            company = value.group(1)
+            companyInner_re.findFirstMatchIn(company) match{
+              case Some(extract) => company = extract.group(1)
+              case None => //do nothing, retain previous value
+            }
+          }
+          case None => {
+            company = "N/A"
+          }
+        }
 
         jobtitle_re.findFirstMatchIn(warcContent) match {
-          case Some(value) => jobTitle = value.group(1)
+          case Some(value) => {
+            jobTitle = value.group(1)
+            jobtitleInner_re.findFirstMatchIn(jobTitle) match{
+              case Some(extract) => jobTitle = extract.group(1)
+              case None => //do nothing, retain previous value
+            }
+          }
           case None => {
             jobTitle = "N/A"
-            println("JobTitle Not Available")
           }
         }
 
         description_re.findFirstMatchIn(warcContent) match {
-          case Some(value) => description = value.group(1)
+          case Some(value) => {
+            description = if (value.group(1) == null) {value.group(2)} else {value.group(1)}
+          }
           case None => {
             description = "N/A"
-            println("Description Not Available")
           }
+        }
+
+        experience_re.findFirstMatchIn(if(description != "N/A")description else warcContent) match {
+          case Some(value) =>{
+            experience = value.group(1)
+          }
+          case None => {
+            experience = "N/A"
+          }
+        }
+
+        //checking for Entry Level keywords in Job Title and page
+        //) jobTitle else warcContent
+        entryLevel_re.findFirstMatchIn(jobTitle) match {
+          case Some(value) =>{
+            //if(value.group(1) != null)
+              entryLevel = true
+          }
+          case None => //entry level is already false
         }
 
         location_re.findFirstMatchIn(warcContent) match {
           case Some(value) => location = value.group(1)
           case None => {
             location = "N/A"
-            println("Location Not Available")
           }
         }
 
         time_re.findFirstMatchIn(warcContent) match {
-          case Some(value) => time = value.group(1)
+          case Some(value) => {
+            time = value.group(1)
+             if (time == null)
+               time = value.group(2)
+             if(time == null)
+               time = value.group(3)
+          }
           case None => {
             time = "N/A"
-            println("Time Not Available")
           }
         }
 
 
-        (company,jobTitle, description, location, time)
+        (company.trim,jobTitle.trim, experience.trim, entryLevel, location.trim, time.trim)
+        //warcContent
 
       }
     )
-    dataRetrievalDF.show(false)
-    dataRetrievalDF.write.mode("overwrite").csv("s3a://maria-batch-1005/Project3Output2/")
+      .withColumnRenamed("_1","Company")
+      .withColumnRenamed("_2","Job Title")
+      .withColumnRenamed("_3", "exp")
+      .withColumnRenamed("_4", "Entry Level")
+      .withColumnRenamed("_5","Location")
+      .withColumnRenamed("_6","Time")
+
+    val postProcessedDF = dataRetrievalDF
+      .withColumn("Experience",
+        when($"Entry Level" === true && $"exp" === "N/A","0").otherwise($"exp"))
+      .drop("exp")
+
+    /**val largestJobSeekers = postProcessedDF
+      .select("Company","Job Title")
+      .filter($"Company" =!= "N/A"|| $"Job Title" =!= "N/A")
+    **/
+
+    //largestJobSeekers.show(false)
+    postProcessedDF.write.mode("overwrite").csv("s3a://maria-batch-1005/Project3Output/DylanOutput")
     spark.close()
 
   }

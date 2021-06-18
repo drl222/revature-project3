@@ -1,12 +1,12 @@
 name := "revature-project3"
 
-version := "0.2"
+version := "0.01"
 
-scalaVersion := "2.11.12"
+scalaVersion := "2.11.0"
 
 
-libraryDependencies += "org.apache.spark" %% "spark-core" % "2.4.7" % "provided"
-libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.4.7" % "provided"
+libraryDependencies += "org.apache.spark" %% "spark-core" % "2.4.7"
+libraryDependencies += "org.apache.spark" %% "spark-sql" % "2.4.7"
 //libraryDependencies += "org.apache.spark" %% "spark-hive" % "2.4.7"
 
 libraryDependencies += "org.apache.hadoop" % "hadoop-common" % "2.10.1"
