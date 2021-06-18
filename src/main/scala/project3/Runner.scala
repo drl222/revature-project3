@@ -8,10 +8,10 @@ import com.amazonaws.services.s3.model.GetObjectRequest
 import java.nio.charset.Charset
 import java.nio.charset.CharsetDecoder
 import java.nio.charset.CodingErrorAction
-
 import keys.keys
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.functions.lower
+import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
 
 import java.util.zip.GZIPInputStream
 
@@ -40,8 +40,22 @@ object Runner {
       .option("header", true)
       .load("s3a://commoncrawl/cc-index/table/cc-main/warc/")
 
+    val  jobSchema = StructType(
+      Seq(
+        StructField("Company", StringType, true),
+        StructField("JobTitle", StringType, true),
+        StructField("Description", StringType, true),
+        StructField("Location", StringType, true),
+        StructField("Time", StringType, true)
+      )
+    )
+
+
+    val Q2DF = spark.read.format("csv").schema(jobSchema).load("s3a://maria-batch-1005/Project3Output2/part-00000-7895666c-1b24-4224-935d-cb645fc2a0af-c000.csv")
+
     //s3a://maria-batch-1005/athena/
     Questions.QuestionFive.QuestionFive.questionFive(spark, commonCrawlDF)
+    Questions.QuestionTwo.QuestionTwo.questionTwo(spark, Q2DF)
     //Amazon S3 Setup
     var s3Client: AmazonS3 = null;
     if(!RUN_ON_EMR){
