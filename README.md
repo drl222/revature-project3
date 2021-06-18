@@ -13,12 +13,15 @@
 ## Technologies Used
 
 * AWS
+	* Athena
 	* S3
 	* EMR
 * Spark ecosystem
 	* Spark SQL
 	* Dataframes, Datasets, RDDs
 	* Scala
+* RegEx
+* Zeppelin
 * Hadoop and related resources
 
 ## Features
@@ -26,27 +29,27 @@
 ### Complete
 
 #### MVPs:
+* Extract testing data
+  * Create framework to access data
+* Job Posting Spikes
+	* Is there a significant spike in tech job postings at the end of business quarters?
+	* If so, which quarter spikes the most?
+* Percent of Relatively Infrequent Job Seekers
+	* What percent of tech job posters post no more than three job ads a month?
 #### Stretch:
 
 ### To-do list:
 
 
 #### MVPs:
-* Extract testing data
-  Create framework to access data
 	
 * Entry Level Experience
 	* What percentage of entry level tech jobs require previous experience?
-* Job Posting Spikes
-	* Is there a significant spike in tech job postings at the end of business quarters?
-	* If so, which quarter spikes the most?
 * Largest Job Seekers
 	* What are the three companies posting the most tech job ads
 * Tech Job Posting Trends
 	* Is there a general trend in tech job postings over the past year?
 	* What about the past month?
-* Percent of Relatively Infrequent Job Seekers
-	*What percent of tech job posters post no more than three job ads a month?
 * Graphical Display of Data for Presentation
 
 #### Stretch:
