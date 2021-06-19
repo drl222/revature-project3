@@ -1,7 +1,7 @@
 package project3.Questions.QuestionTwo
 
 import org.apache.spark.sql.catalyst.dsl.expressions.StringToAttributeConversionHelper
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.apache.spark._
 
 import java.io.PrintWriter
@@ -15,7 +15,6 @@ import java.io.File
 import java.io.PrintWriter
 import java.time.LocalDateTime
 import org.apache.spark.sql.functions.{col, lower, trunc}
-import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.col
 
 object QuestionTwo {
@@ -41,8 +40,8 @@ object QuestionTwo {
 
     q.createOrReplaceTempView("job")
 
-    spark.sql("select Company, count(Company) as count from job group by Company order by count DESC limit 3").show(truncate = false)
-
+    val d = spark.sql("select Company, count(Company) as count from job group by Company order by count DESC limit 3")
+    d.coalesce(1).write.format("csv").option("header", true).mode(SaveMode.Overwrite).save("hdfs://localhost:9000/user/project2/output9.csv")
 
 
   }
