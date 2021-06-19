@@ -64,6 +64,13 @@
 ## Getting Started
 
 > `gh repo clone drl222/revature-project3`
+> Technology Versions:
+> 	EMR Cluster: 5.33.0
+> 	JDK: 1.8.x
+> 	Scala: 2.11.12
+> 	Hadoop: 2.10.1
+> 	Spark: 2.4.7
+> 	Zeppelin: 0.9.0
 
 ## Usage
 
