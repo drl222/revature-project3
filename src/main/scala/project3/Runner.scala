@@ -44,14 +44,12 @@ object Runner {
       Seq(
         StructField("Company", StringType, true),
         StructField("JobTitle", StringType, true),
-        StructField("Description", StringType, true),
-        StructField("Location", StringType, true),
-        StructField("Time", StringType, true)
+
       )
     )
 
 
-    val Q2DF = spark.read.format("csv").schema(jobSchema).load("s3a://maria-batch-1005/Project3Output2/part-00000-7895666c-1b24-4224-935d-cb645fc2a0af-c000.csv")
+    val Q2DF = spark.read.format("csv").schema(jobSchema).load("s3a://maria-batch-1005/Project3Output/DylanOutput/combined-csv-files.csv")
 
     //s3a://maria-batch-1005/athena/
     Questions.QuestionFive.QuestionFive.questionFive(spark, commonCrawlDF)
