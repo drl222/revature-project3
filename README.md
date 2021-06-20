@@ -48,7 +48,7 @@
 * Percent of Relatively Infrequent Job Seekers
 	* What percent of tech job posters post no more than three job ads a month?
 
-### TDL
+### To-Do List
 
 #### MVPs:
 	
@@ -73,6 +73,7 @@
 	* Spark: 2.4.7
 	* Zeppelin: 0.9.0
 	* SBT: 1.5.3
+* For supplemental Python script, install Python 3 and pip, and run `pip install -r requirements.txt`
 
 ## Usage
 
@@ -81,8 +82,10 @@
 * On EMR add step
 	* Type: Spark Application
 	* Deploy Mode: Cluster
-	* Submit Options: ---class project3.Runner
+	* Submit Options: --class project3.Runner
 	* Application Location: .jar file in S3 bucket
+* The results are written back to S3, in the locations given by the code
+* Supplemental Python script is for manual investigation of HTML files. Run it like any other Python file, `python fetch_job_pages.py`. You'll need Spark running locally before it can run.
 
 ## Contributors
 
