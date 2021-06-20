@@ -1,17 +1,12 @@
 package project3
 
 
-import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
-import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
-import com.amazonaws.services.s3.model.{GetObjectRequest, S3ObjectInputStream}
-
-import java.nio.charset.Charset
-import java.nio.charset.CharsetDecoder
-import java.nio.charset.CodingErrorAction
+import awsS3.S3Serializable
 import keys.keys
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.functions.{lower, when}
 import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType, TimestampType}
+import project3.Questions.Question1
 
 import java.util.zip.GZIPInputStream
 
@@ -23,7 +18,7 @@ object Runner {
     val spark:SparkSession = SparkSession
       .builder()
       //.master("local[*]")
-      .appName("francisco extract")
+      .appName("Project 3 Final")
       //.config("spark.hadoop.fs.s3a.access.key", keys.AccessKey)
       //.config("spark.hadoop.fs.s3a.secret.key", keys.SecretKey)
       //.config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
@@ -36,7 +31,7 @@ object Runner {
     spark.sparkContext.setLogLevel("WARN")
 
     /**
-
+     //'ATHENA' QUERY
     val commonCrawlDF = spark.read
       .option("inferSchema", "true")
       .option("header", true)
@@ -72,8 +67,7 @@ object Runner {
       )
       .select("url","url_path","warc_filename", "warc_record_offset", "warc_record_length")
       .limit(5)
-    **/
-    /**
+
     val  customSchema = StructType(
       Seq(
         StructField("warc_filename", StringType, true),
@@ -82,33 +76,27 @@ object Runner {
         StructField("timestamp", TimestampType, true),
         StructField("url", StringType, true)
       )
-    ) **/
-    //s3a://maria-batch-1005/athena/small-testing/indeed_sample.txt
-    //s3a://maria-batch-1005/large_test
-    // s3a://maria-batch-1005/test_2015_2021
-    /**
+    )
+
     val filteredCommonCrawlDF = {
       spark.read.format("parquet")
         .schema(customSchema)
         .load("s3a://maria-batch-1005/large_test")
+    //END OF 'ATHENA' QUERY
+    **/
 
-    } **/
+    val smallTest = "s3a://maria-batch-1005/athena/small-testing/indeed_sample.txt"
+    val largeTest = "s3a://maria-batch-1005/large_test"
+    val final2015To2021 = "s3a://maria-batch-1005/test_2015_2021"
+    val s3OutputBucket = "s3a://maria-1005-batch/Project3Output/"
 
-
-    val filteredCommonCrawlDF = spark.read.format("parquet").option("inferschema","true").load("s3a://maria-batch-1005/test_2015_2021")
-
-    //filteredCommonCrawlDF.show(false)
-
+    val filteredCommonCrawlDF = spark.read.format("parquet").option("inferschema","true").load(final2015To2021)
 
     val warcFilesInfo =
       filteredCommonCrawlDF
         .select("warc_filename", "warc_record_offset", "warc_record_length")
 
-   // warcFilesInfo.show()
-
-
     //(?s) in regex allows the regex to include newlines in the . operator e.g:(.*? will include newlines now)
-    //<.*? =\"date\" .*? >(.*>)<.*?>
     val company_re = "(?s)<.*?=\"[cC]ompany(?:[nN]ame)?\".*?>(.*?)</.*?>".r
     val companyInner_re = "(?s)(?:<.*>)\\s*(.*)".r
     val jobtitle_re = "(?s)<.*?=\"[jJ]ob[tT]itle\">(.*?)</.*?>".r
@@ -117,7 +105,7 @@ object Runner {
     val description_re = "(?s)(?:<.*?=\"job_summary\" class=\"summary\">(.*?)</.*?>)|(?:<div id=\"jobDescriptionText\" class=\"jobsearch-jobDescriptionText\">(.*?)</div>)".r
     val time_re = "(?s)(?:<span class=\"date\">(.*?)</span>)|(?:<div class=\"jobsearch-JobMetadataFooter\">\\s*<div>(.*?)</div>)|(?:<span class=\"old-date\">(.*?)</span>)".r
     val experience_re = "(?s)([0-9]+)\\+? [Yy]ears? ?.*? [Ee]xperience".r
-    val entryLevel_re = "(?s)[eE]ntry".r
+    val entryLevel_re = "(?s)[eE]ntry|[Jj](?s:unio)?r|[Tt]ier ?[1I]".r
 
     val dataRetrievalDF = warcFilesInfo.map(
       warcRow => {
@@ -170,18 +158,35 @@ object Runner {
             experience = value.group(1)
           }
           case None => {
-            experience = "N/A"
+            "[eE]xperience".r.findFirstMatchIn(if(description != "N/A")description else warcContent) match{
+              case Some(extract) => experience = "Generic Experience"
+              case None =>  experience = "0"
+                /**
+                "[Nn]o (?:[pP]rior)? ?[Ee]xperience".r.findFirstMatchIn(if (description != "N/A") description else warcContent) match {
+                  case Some(exp) => experience = "0"
+                  case None => experience = "N/A"
+                }**/
+              }
           }
         }
 
         //checking for Entry Level keywords in Job Title and page
-        //) jobTitle else warcContent
         entryLevel_re.findFirstMatchIn(jobTitle) match {
           case Some(value) =>{
             //if(value.group(1) != null)
               entryLevel = true
           }
-          case None => //entry level is already false
+          case None =>
+            if(description != "N/A")
+              entryLevel_re.findFirstMatchIn(description) match {
+                case Some(extract) => entryLevel = true
+                case None => //retain previous value
+              }
+             /**
+            if(experience != "N/A" && experience != "Generic Experience" && experience.toInt < 3)
+              entryLevel = true
+            **/
+
         }
 
         location_re.findFirstMatchIn(warcContent) match {
@@ -212,23 +217,34 @@ object Runner {
     )
       .withColumnRenamed("_1","Company")
       .withColumnRenamed("_2","Job Title")
-      .withColumnRenamed("_3", "exp")
+      .withColumnRenamed("_3", "Experience")
       .withColumnRenamed("_4", "Entry Level")
       .withColumnRenamed("_5","Location")
       .withColumnRenamed("_6","Time")
 
+    /**
     val postProcessedDF = dataRetrievalDF
       .withColumn("Experience",
         when($"Entry Level" === true && $"exp" === "N/A","0").otherwise($"exp"))
       .drop("exp")
 
-    /**val largestJobSeekers = postProcessedDF
+    val largestJobSeekers = postProcessedDF
       .select("Company","Job Title")
       .filter($"Company" =!= "N/A"|| $"Job Title" =!= "N/A")
     **/
 
     //largestJobSeekers.show(false)
-    postProcessedDF.write.mode("overwrite").csv("s3a://maria-batch-1005/Project3Output/DylanOutput")
+    //postProcessedDF.write.mode("overwrite").csv("s3a://maria-batch-1005/Project3Output/DylanOutput")
+
+
+    if(RUN_ON_EMR) {
+      val (jobsDF, entryExpReqPercentage) = Question1.getEntryLevelResults(dataRetrievalDF, spark)
+      Question1.storeResultsToS3(s3OutputBucket, jobsDF, entryExpReqPercentage)
+    }
+    else{
+      Question1.showResults(dataRetrievalDF,spark)
+    }
+
     spark.close()
 
   }
@@ -249,49 +265,4 @@ object Runner {
 
 
 
-//to make it Serializable for the Worker Nodes when in Cluster Distributive Environment by making it static
-//https://www.nicolaferraro.me/2016/02/22/using-non-serializable-objects-in-apache-spark/
-object S3Serializable {
-  val s3Creds = new BasicAWSCredentials(keys.AccessKey, keys.SecretKey)
-  val s3Client =
-    AmazonS3ClientBuilder
-      .standard()
-      .withCredentials(new AWSStaticCredentialsProvider(s3Creds))
-      .withRegion("us-east-1")
-      .build()
-
-  /**
-   * getContentFromS3Object utilizes the Amazon S3 Java API to specifically traverse the Common Crawl Index by
-   * using the withRange function of S3Objects to skip and point to the correct Warc Page content (using file offset and length)
-   * within the accumulated file (@param filename) that contains multiple warc pages.
-   * @param filename = the filename path excluding the root bucket
-   * @param fileOffset = the respective file offset for fileName
-   * @param fileLength = the respective file length for fileName
-   * @return = a String of the entire content of the fileName
-   */
-  def getContentFromS3Object(filename: String, fileOffset: Long, fileLength: Long): String = {
-    //https://stackoverflow.com/questions/24537884/how-to-get-first-n-bytes-of-file-from-s3-url
-    //https://stackoverflow.com/questions/13625024/how-to-read-a-text-file-with-mixed-encodings-in-scala-or-java
-    val s3Client = S3Serializable.s3Client
-    //make a request to get the file from commoncrawl
-    val request = new GetObjectRequest("commoncrawl",filename)
-    //set the specific page within the warc file
-    request.withRange(fileOffset, fileOffset + fileLength - 1)
-    //retrieve it
-    val s3WarcObject = s3Client.getObject(request)
-    //check for any malformed input in the input stream
-    val decoder = Charset.forName("UTF-8").newDecoder
-    decoder.onMalformedInput(CodingErrorAction.IGNORE)
-    //use GZIP input stream to unzip the .gz so we can use fromInputStream to convert to String with mkString
-    val warcContent: String =
-      scala.io.Source.fromInputStream(
-        new GZIPInputStream(s3WarcObject.getObjectContent())
-      ).mkString
-    //release the resources
-    s3WarcObject.close()
-
-    warcContent
-  }
-
-}
 
