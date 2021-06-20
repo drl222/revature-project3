@@ -3,8 +3,9 @@ package project3
 
 
 import awsS3.S3Serializable
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.{Row, SparkSession}
-import project3.Questions.Question1
+import project3.Questions.{QuestionOne, _}
 
 
 
@@ -104,7 +105,7 @@ object Runner {
     val description_re = "(?s)(?:<.*?=\"job_summary\" class=\"summary\">(.*?)</.*?>)|(?:<div id=\"jobDescriptionText\" class=\"jobsearch-jobDescriptionText\">(.*?)</div>)".r
     val time_re = "(?s)(?:<span class=\"date\">(.*?)</span>)|(?:<div class=\"jobsearch-JobMetadataFooter\">\\s*<div>(.*?)</div>)|(?:<span class=\"old-date\">(.*?)</span>)".r
     val experience_re = "(?s)([0-9]+)\\+? [Yy]ears? ?.*? [Ee]xperience".r
-    val entryLevel_re = "(?s)[eE]ntry|[Jj](?s:unio)?r|[Tt]ier ?[1I]".r
+    val entryLevel_re = "(?s)(?:[eE]ntry)|(?:[Jj](?:unio)?r)|(?:[Tt]ier ?[1I])".r
 
     val dataRetrievalDF = warcFilesInfo.map(
       warcRow => {
@@ -224,7 +225,6 @@ object Runner {
       Seq(
         StructField("Company", StringType, true),
         StructField("JobTitle", StringType, true),
-
       )
     )
 
@@ -232,17 +232,17 @@ object Runner {
     val Q2DF = spark.read.format("csv").schema(jobSchema).load("s3a://maria-batch-1005/Project3Output/DylanOutput/combined-csv-files.csv")
 
     //s3a://maria-batch-1005/athena/
-    Questions.QuestionFive.QuestionFive.questionFive(spark, commonCrawlDF)
-    Questions.QuestionTwo.QuestionTwo.questionTwo(spark, Q2DF)
+    QuestionFive.QuestionFive.questionFive(spark, filteredCommonCrawlDF)
+    QuestionTwo.QuestionTwo.questionTwo(spark, Q2DF)
 
 
     if(RUN_ON_EMR) {
-      val (jobsDF, entryExpReqPercentage) = Question1.getEntryLevelResults(dataRetrievalDF, spark)
-      Question1.storeResultsToS3(s3OutputBucket, jobsDF, entryExpReqPercentage)
+      val (jobsDF, entryExpReqPercentage) = QuestionOne.Question1.getEntryLevelResults(dataRetrievalDF, spark)
+      QuestionOne.Question1.storeResultsToS3(s3OutputBucket, jobsDF, entryExpReqPercentage)
 
     }
     else{
-      Question1.showResults(dataRetrievalDF,spark)
+      QuestionOne.Question1.showResults(dataRetrievalDF,spark)
 
     }
 
