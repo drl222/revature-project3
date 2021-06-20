@@ -48,17 +48,14 @@
 * Percent of Relatively Infrequent Job Seekers
 	* What percent of tech job posters post no more than three job ads a month?
 
-### TDL
+### To-Do List
 
 #### MVPs:
 	
 * Entry Level Experience
-	* What percentage of entry level tech jobs require previous experience?
-* Largest Job Seekers
-	* What are the three companies posting the most tech job ads
-* Tech Job Posting Trends
-	* Is there a general trend in tech job postings over the past year?
-	* What about the past month?
+	* Make Regex more Robust to capture different HTML Structures over the years. 
+	* Reevaluate performance cost of using WET Files instead of WARC Files to scrape for experience.
+	* Expand to other sites like Monster and Glassdoor, depending on performance cost of WET vs regex WARC.
 * Graphical Display of Data for Presentation
 	* Establish Zeppelin on a cluster connected to a primary table to allow more efficient visualization of a wider array of data for all project members
 
