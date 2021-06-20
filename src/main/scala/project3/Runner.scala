@@ -2,17 +2,13 @@ package project3
 
 
 import awsS3.S3Serializable
-import keys.keys
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.sql.functions.{lower, when}
-import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType, TimestampType}
 import project3.Questions.Question1
 
-import java.util.zip.GZIPInputStream
 
 
 object Runner {
-  final val RUN_ON_EMR = false
+  final val RUN_ON_EMR = true
 
   def main(args: Array[String]): Unit = {
     val spark:SparkSession = SparkSession
@@ -211,7 +207,6 @@ object Runner {
 
 
         (company.trim,jobTitle.trim, experience.trim, entryLevel, location.trim, time.trim)
-        //warcContent
 
       }
     )
@@ -222,27 +217,20 @@ object Runner {
       .withColumnRenamed("_5","Location")
       .withColumnRenamed("_6","Time")
 
-    /**
-    val postProcessedDF = dataRetrievalDF
-      .withColumn("Experience",
-        when($"Entry Level" === true && $"exp" === "N/A","0").otherwise($"exp"))
-      .drop("exp")
 
-    val largestJobSeekers = postProcessedDF
-      .select("Company","Job Title")
-      .filter($"Company" =!= "N/A"|| $"Job Title" =!= "N/A")
-    **/
 
-    //largestJobSeekers.show(false)
-    //postProcessedDF.write.mode("overwrite").csv("s3a://maria-batch-1005/Project3Output/DylanOutput")
+
+
 
 
     if(RUN_ON_EMR) {
       val (jobsDF, entryExpReqPercentage) = Question1.getEntryLevelResults(dataRetrievalDF, spark)
       Question1.storeResultsToS3(s3OutputBucket, jobsDF, entryExpReqPercentage)
+
     }
     else{
       Question1.showResults(dataRetrievalDF,spark)
+
     }
 
     spark.close()
