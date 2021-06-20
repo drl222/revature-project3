@@ -6,6 +6,8 @@ import com.amazonaws.services.s3.model.GetObjectRequest
 import org.apache.spark.sql.functions.{col, date_format, lower, udf}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import java.util.zip.GZIPInputStream
+import org.apache.spark.storage.StorageLevel.DISK_ONLY
+
 
 object JobTrends {
   def main(args: Array[String]): Unit = {
@@ -86,7 +88,7 @@ object JobTrends {
           lower($"url_path").contains("back end"))
         .limit(siteCap)
 
-      dataTrim.toDF().coalesce(8).write.mode("overwrite").save("s3a://" + saveToBucket + saveToKey + "/Source")
+      dataTrim.toDF().coalesce(8).write.mode("overwrite").save("s3a://" + saveToBucket + saveToKey + "/Source").persist(DISK_ONLY)
       val dataUse = dataTrim.collect
 
       //AWS Content
@@ -119,9 +121,10 @@ object JobTrends {
             .drop($"HTML Content").drop($"HTML Extract").na.drop
           coreContent.union(dfFinal)
         }
-        coreContent.coalesce(8).write.format("csv").mode("append").save("s3a://" + saveToBucket + saveToKey + "/Extract")
         s3Object.close
       })
+      coreContent.coalesce(8).write.format("csv").mode("append").save("s3a://" + saveToBucket + saveToKey + "/Extract")
+      coreContent.unpersist()
     }
   }
 }
