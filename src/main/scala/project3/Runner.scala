@@ -1,70 +1,40 @@
 package project3
 
 
-import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
-import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
-import com.amazonaws.services.s3.model.GetObjectRequest
 
-import java.nio.charset.Charset
-import java.nio.charset.CharsetDecoder
-import java.nio.charset.CodingErrorAction
-import keys.keys
+import awsS3.S3Serializable
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.sql.functions.lower
-import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructType}
+import project3.Questions.Question1
 
-import java.util.zip.GZIPInputStream
+
 
 
 object Runner {
-  final val RUN_ON_EMR = false;
+  final val RUN_ON_EMR = true
 
   def main(args: Array[String]): Unit = {
     val spark:SparkSession = SparkSession
       .builder()
-      .master("local[*]")
-      .appName("commoncrawl demo")
-      .config("spark.hadoop.fs.s3a.access.key", keys.AccessKey)
-      .config("spark.hadoop.fs.s3a.secret.key", keys.SecretKey)
-      .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
-      .config("spark.hadoop.fs.s3a.multiobjectdelete.enable","false")
-      .config("spark.hadoop.fs.s3a.fast.upload","true")
-      .config("spark.hadoop.fs.s3a.endpoint", "s3.amazonaws.com")
+      //.master("local[*]")
+      .appName("Project 3 Final")
+      //.config("spark.hadoop.fs.s3a.access.key", keys.AccessKey)
+      //.config("spark.hadoop.fs.s3a.secret.key", keys.SecretKey)
+      //.config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+      //.config("spark.hadoop.fs.s3a.multiobjectdelete.enable","false")
+      //.config("spark.hadoop.fs.s3a.fast.upload","true")
+      //.config("spark.hadoop.fs.s3a.endpoint", "s3.amazonaws.com")
       .getOrCreate()
 
     import spark.implicits._
     spark.sparkContext.setLogLevel("WARN")
 
+    /**
+     //'ATHENA' QUERY
     val commonCrawlDF = spark.read
       .option("inferSchema", "true")
       .option("header", true)
       .load("s3a://commoncrawl/cc-index/table/cc-main/warc/")
-
-    val  jobSchema = StructType(
-      Seq(
-        StructField("Company", StringType, true),
-        StructField("JobTitle", StringType, true),
-
-      )
-    )
-
-
-    val Q2DF = spark.read.format("csv").schema(jobSchema).load("s3a://maria-batch-1005/Project3Output/DylanOutput/combined-csv-files.csv")
-
-    //s3a://maria-batch-1005/athena/
-    Questions.QuestionFive.QuestionFive.questionFive(spark, commonCrawlDF)
-    Questions.QuestionTwo.QuestionTwo.questionTwo(spark, Q2DF)
-    //Amazon S3 Setup
-    var s3Client: AmazonS3 = null;
-    if(!RUN_ON_EMR){
-      val s3Creds = new BasicAWSCredentials(keys.AccessKey, keys.SecretKey)
-      s3Client =
-        AmazonS3ClientBuilder
-          .standard()
-          .withCredentials(new AWSStaticCredentialsProvider(s3Creds))
-          .withRegion("us-east-1")
-          .build()
-    }
+    
     val s3OutputBucket = "s3a://franciscotest/"
     val crawl = "CC-MAIN-2021-21"
     val subset = "warc"
@@ -75,8 +45,9 @@ object Runner {
       .filter( $"crawl" === crawl)
       .filter($"fetch_status" === 200)
       .filter($"subset" === subset)
-      //.filter($"content_languages".like("%eng%"))
+      .filter($"content_languages".like("%eng%"))
       .filter($"url_host_registered_domain".isin(jobDomainList:_*))
+      .filter($"url".like("%indeed.com/cmp/%/job%"))
       .filter(lower($"url_path").like("%job%"))
       .filter(lower($"url_path").contains("programmer") ||
         lower($"url_path").contains("engineer") ||
@@ -93,85 +64,193 @@ object Runner {
         lower($"url_path").contains("analyst")
       )
       .select("url","url_path","warc_filename", "warc_record_offset", "warc_record_length")
-      .limit(100)
+      .limit(5)
 
+    val  customSchema = StructType(
+      Seq(
+        StructField("warc_filename", StringType, true),
+        StructField("warc_record_offset", IntegerType, true),
+        StructField("warc_record_length", IntegerType, true),
+        StructField("timestamp", TimestampType, true),
+        StructField("url", StringType, true)
+      )
+    )
+
+    val filteredCommonCrawlDF = {
+      spark.read.format("parquet")
+        .schema(customSchema)
+        .load("s3a://maria-batch-1005/large_test")
+    //END OF 'ATHENA' QUERY
+    **/
+
+    val smallTest = "s3a://maria-batch-1005/athena/small-testing/indeed_sample.txt"
+    val largeTest = "s3a://maria-batch-1005/large_test"
+    val final2015To2021 = "s3a://maria-batch-1005/test_2015_2021"
+    val s3OutputBucket = "s3a://maria-1005-batch/Project3Output/"
+
+    val filteredCommonCrawlDF = spark.read.format("parquet").option("inferschema","true").load(final2015To2021)
 
     val warcFilesInfo =
       filteredCommonCrawlDF
         .select("warc_filename", "warc_record_offset", "warc_record_length")
-        .map(row=> (row.getString(0), row.getInt(1), row.getInt(2)))
-        .take(10)
-        .toList
 
-    //warcFilesInfo.foreach(
-      //warcFile => {
-       // val warcContent: String = getContentFromS3Object(warcFile._1, warcFile._2, warcFile._3, s3Client)
-        //println(" NEWWWWW  WARC CONTENT")
-       // println(warcContent)
 
-        /**
-        var wetExtracts =
-          spark.read.option("lineSep", "Content-Length: ").textFile(crawlFilepath)
-            .filter(
-              lower($"value").contains("job") ||
-              lower($"value").contains("career") ||
-              lower($"value").contains("programmer") ||
-              lower($"value").contains("engineer") ||
-              lower($"value").contains("software") ||
-              lower($"value").contains("computer") ||
-              lower($"value").contains("developer") ||
-              lower($"value").contains("java") ||
-              lower($"value").contains("information technology") ||
-              lower($"value").contains("it specialist") ||
-              lower($"value").contains("tech support") ||
-              lower($"value").contains("technical support") ||
-              lower($"value").contains("network") ||
-              lower($"value").contains("technician") ||
-              lower($"value").contains("analyst")
-            )
-        wetExtracts.take(10).foreach(println)
-         **/
-     // }
-   // )
+    //(?s) in regex allows the regex to include newlines in the . operator e.g:(.*? will include newlines now)
+    val company_re = "(?s)<.*?=\"[cC]ompany(?:[nN]ame)?\".*?>(.*?)</.*?>".r
+    val companyInner_re = "(?s)(?:<.*>)\\s*(.*)".r
+    val jobtitle_re = "(?s)<.*?=\"[jJ]ob[tT]itle\">(.*?)</.*?>".r
+    val jobtitleInner_re = "(?s)(?:<.* title=\"(.*?)\".*>)".r
+    val location_re = "(?s)<.*?=\"location\">(.*?)</.*?>".r
+    val description_re = "(?s)(?:<.*?=\"job_summary\" class=\"summary\">(.*?)</.*?>)|(?:<div id=\"jobDescriptionText\" class=\"jobsearch-jobDescriptionText\">(.*?)</div>)".r
+    val time_re = "(?s)(?:<span class=\"date\">(.*?)</span>)|(?:<div class=\"jobsearch-JobMetadataFooter\">\\s*<div>(.*?)</div>)|(?:<span class=\"old-date\">(.*?)</span>)".r
+    val experience_re = "(?s)([0-9]+)\\+? [Yy]ears? ?.*? [Ee]xperience".r
+    val entryLevel_re = "(?s)[eE]ntry|[Jj](?s:unio)?r|[Tt]ier ?[1I]".r
 
-    /**
-     * getContentFromS3Object utilizes the Amazon S3 Java API to specifically traverse the Common Crawl Index by
-     * using the withRange function of S3Objects to skip and point to the correct Warc Page content (using file offset and length)
-     * within the accumulated file (@param filename) that contains multiple warc pages.
-     * @param filename = the filename path excluding the root bucket
-     * @param fileOffset = the respective file offset for fileName
-     * @param fileLength = the respective file length for fileName
-     * @param s3Client = the Amazon S3 Client object containing credentials
-     * @return = a String of the entire content of the fileName
-     */
-    def getContentFromS3Object(filename: String, fileOffset: Int, fileLength: Int, s3Client : AmazonS3): String = {
-      //https://stackoverflow.com/questions/24537884/how-to-get-first-n-bytes-of-file-from-s3-url
-      //https://stackoverflow.com/questions/13625024/how-to-read-a-text-file-with-mixed-encodings-in-scala-or-java
+    val dataRetrievalDF = warcFilesInfo.map(
+      warcRow => {
+        val warcContent: String = S3Serializable.getContentFromS3Object(warcRow.getString(0), warcRow.getInt(1), warcRow.getInt(2))
+        var company = ""
+        var jobTitle = ""
+        var description = ""
+        var location = ""
+        var time = ""
+        var experience = ""
+        var entryLevel = false
 
-      //make a request to get the file from commoncrawl
-      val request = new GetObjectRequest("commoncrawl",filename)
-      //set the specific page within the warc file
-      request.withRange(fileOffset, fileOffset + fileLength - 1)
-      //retrieve it
-      val s3WarcObject = s3Client.getObject(request)
-      //check for any malformed input in the input stream
-      val decoder = Charset.forName("UTF-8").newDecoder
-      decoder.onMalformedInput(CodingErrorAction.IGNORE)
-      //use GZIP input stream to unzip the .gz so we can use fromInputStream to convert to String with mkString
-      val warcContent: String =
-        scala.io.Source.fromInputStream(
-          new GZIPInputStream(s3WarcObject.getObjectContent())
-        ).mkString
-      //release the resources
-      s3WarcObject.close()
+        company_re.findFirstMatchIn(warcContent) match {
+          case Some(value) => {
+            company = value.group(1)
+            companyInner_re.findFirstMatchIn(company) match{
+              case Some(extract) => company = extract.group(1)
+              case None => //do nothing, retain previous value
+            }
+          }
+          case None => {
+            company = "N/A"
+          }
+        }
 
-      warcContent
+        jobtitle_re.findFirstMatchIn(warcContent) match {
+          case Some(value) => {
+            jobTitle = value.group(1)
+            jobtitleInner_re.findFirstMatchIn(jobTitle) match{
+              case Some(extract) => jobTitle = extract.group(1)
+              case None => //do nothing, retain previous value
+            }
+          }
+          case None => {
+            jobTitle = "N/A"
+          }
+        }
+
+        description_re.findFirstMatchIn(warcContent) match {
+          case Some(value) => {
+            description = if (value.group(1) == null) {value.group(2)} else {value.group(1)}
+          }
+          case None => {
+            description = "N/A"
+          }
+        }
+
+        experience_re.findFirstMatchIn(if(description != "N/A")description else warcContent) match {
+          case Some(value) =>{
+            experience = value.group(1)
+          }
+          case None => {
+            "[eE]xperience".r.findFirstMatchIn(if(description != "N/A")description else warcContent) match{
+              case Some(extract) => experience = "Generic Experience"
+              case None =>  experience = "0"
+                /**
+                "[Nn]o (?:[pP]rior)? ?[Ee]xperience".r.findFirstMatchIn(if (description != "N/A") description else warcContent) match {
+                  case Some(exp) => experience = "0"
+                  case None => experience = "N/A"
+                }**/
+              }
+          }
+        }
+
+        //checking for Entry Level keywords in Job Title and page
+        entryLevel_re.findFirstMatchIn(jobTitle) match {
+          case Some(value) =>{
+            //if(value.group(1) != null)
+              entryLevel = true
+          }
+          case None =>
+            if(description != "N/A")
+              entryLevel_re.findFirstMatchIn(description) match {
+                case Some(extract) => entryLevel = true
+                case None => //retain previous value
+              }
+             /**
+            if(experience != "N/A" && experience != "Generic Experience" && experience.toInt < 3)
+              entryLevel = true
+            **/
+
+        }
+
+        location_re.findFirstMatchIn(warcContent) match {
+          case Some(value) => location = value.group(1)
+          case None => {
+            location = "N/A"
+          }
+        }
+
+        time_re.findFirstMatchIn(warcContent) match {
+          case Some(value) => {
+            time = value.group(1)
+             if (time == null)
+               time = value.group(2)
+             if(time == null)
+               time = value.group(3)
+          }
+          case None => {
+            time = "N/A"
+          }
+        }
+
+
+        (company.trim,jobTitle.trim, experience.trim, entryLevel, location.trim, time.trim)
+
+      }
+    )
+      .withColumnRenamed("_1","Company")
+      .withColumnRenamed("_2","Job Title")
+      .withColumnRenamed("_3", "Experience")
+      .withColumnRenamed("_4", "Entry Level")
+      .withColumnRenamed("_5","Location")
+      .withColumnRenamed("_6","Time")
+    
+    val  jobSchema = StructType(
+      Seq(
+        StructField("Company", StringType, true),
+        StructField("JobTitle", StringType, true),
+
+      )
+    )
+
+
+    val Q2DF = spark.read.format("csv").schema(jobSchema).load("s3a://maria-batch-1005/Project3Output/DylanOutput/combined-csv-files.csv")
+
+    //s3a://maria-batch-1005/athena/
+    Questions.QuestionFive.QuestionFive.questionFive(spark, commonCrawlDF)
+    Questions.QuestionTwo.QuestionTwo.questionTwo(spark, Q2DF)
+
+
+    if(RUN_ON_EMR) {
+      val (jobsDF, entryExpReqPercentage) = Question1.getEntryLevelResults(dataRetrievalDF, spark)
+      Question1.storeResultsToS3(s3OutputBucket, jobsDF, entryExpReqPercentage)
+
+    }
+    else{
+      Question1.showResults(dataRetrievalDF,spark)
+
     }
 
-
-
     spark.close()
+
   }
+
+
 
   /**
    * Converts the warc filename path to a wet filename path
@@ -183,4 +262,8 @@ object Runner {
   }
 
 
-}
+} //end runner
+
+
+
+
