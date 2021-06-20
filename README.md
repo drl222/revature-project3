@@ -20,6 +20,7 @@
 	* Spark SQL
 	* Dataframes, Datasets, RDDs
 	* Scala
+* SBT
 * RegEx
 * Zeppelin
 * Hadoop and related resources
@@ -30,16 +31,24 @@
 
 #### MVPs:
 * Extract testing data
-  * Create framework to access data
+  	* Create framework to access data
 * Job Posting Spikes
 	* Is there a significant spike in tech job postings at the end of business quarters?
 	* If so, which quarter spikes the most?
+* Entry Level Experience
+	* What percentage of entry level tech jobs require previous experience?
+* Largest Job Seekers
+	* What are the three companies posting the most tech job ads
+* Graphical Display of Data for Presentation
+
+### Stretch:
+* Tech Job Posting Trends
+	* Is there a general trend in tech job postings over the past year?
+	* What about the past month?
 * Percent of Relatively Infrequent Job Seekers
 	* What percent of tech job posters post no more than three job ads a month?
-#### Stretch:
 
-### To-do list:
-
+### TDL
 
 #### MVPs:
 	
@@ -51,24 +60,30 @@
 	* Is there a general trend in tech job postings over the past year?
 	* What about the past month?
 * Graphical Display of Data for Presentation
-
-#### Stretch:
-* Low Code/No Code
-	* What percentage of Tech Job Listings require experience in a Low Code or No Code solution?
-* Tech Ads Proportional To Population
-	* Where do we see relatively fewer tech ads proportional to population?
-* Qualifications and Certifications
-	* What are the top three qualifications or certifications requested by Employers?
-* Open Question(s) (TBD)
+	* Establish Zeppelin on a cluster connected to a primary table to allow more efficient visualization of a wider array of data for all project members
 
 ## Getting Started
 
-> `gh repo clone drl222/revature-project3`
+* Clone the project: `gh repo clone drl222/revature-project3`
+* Configure the following technologies with versions:
+	* AWS EMR Cluster: 5.33.0
+	* JDK: 1.8.x
+	* Scala: 2.11.12
+	* Hadoop: 2.10.1
+	* Spark: 2.4.7
+	* Zeppelin: 0.9.0
+	* SBT: 1.5.3
 
 ## Usage
 
-> To be updated
+* /path to project folder/ sbt package 
+* Upload .jar file into bucket on S3
+* On EMR add step
+	* Type: Spark Application
+	* Deploy Mode: Cluster
+	* Submit Options: ---class project3.Runner
+	* Application Location: .jar file in S3 bucket
 
 ## Contributors
 
-Revature Reston 2104 Big data batch (April  2021- June 2021)
+Revature Reston 210405 Big Data batch (April  2021- June 2021)
