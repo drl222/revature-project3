@@ -13,6 +13,7 @@ libraryDependencies += "org.apache.hadoop" % "hadoop-common" % "2.10.1"
 libraryDependencies += "org.apache.hadoop" % "hadoop-client" % "2.10.1"
 libraryDependencies += "org.apache.hadoop" % "hadoop-aws" % "2.10.1"
 
+
 // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-core
 //libraryDependencies += "com.amazonaws" % "aws-java-sdk-core" % "1.11.970" % "provided"
 

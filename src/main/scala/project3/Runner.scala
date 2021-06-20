@@ -1,9 +1,11 @@
 package project3
 
 
+
 import awsS3.S3Serializable
 import org.apache.spark.sql.{Row, SparkSession}
 import project3.Questions.Question1
+
 
 
 
@@ -32,7 +34,7 @@ object Runner {
       .option("inferSchema", "true")
       .option("header", true)
       .load("s3a://commoncrawl/cc-index/table/cc-main/warc/")
-
+    
     val s3OutputBucket = "s3a://franciscotest/"
     val crawl = "CC-MAIN-2021-21"
     val subset = "warc"
@@ -91,6 +93,7 @@ object Runner {
     val warcFilesInfo =
       filteredCommonCrawlDF
         .select("warc_filename", "warc_record_offset", "warc_record_length")
+
 
     //(?s) in regex allows the regex to include newlines in the . operator e.g:(.*? will include newlines now)
     val company_re = "(?s)<.*?=\"[cC]ompany(?:[nN]ame)?\".*?>(.*?)</.*?>".r
@@ -216,11 +219,21 @@ object Runner {
       .withColumnRenamed("_4", "Entry Level")
       .withColumnRenamed("_5","Location")
       .withColumnRenamed("_6","Time")
+    
+    val  jobSchema = StructType(
+      Seq(
+        StructField("Company", StringType, true),
+        StructField("JobTitle", StringType, true),
+
+      )
+    )
 
 
+    val Q2DF = spark.read.format("csv").schema(jobSchema).load("s3a://maria-batch-1005/Project3Output/DylanOutput/combined-csv-files.csv")
 
-
-
+    //s3a://maria-batch-1005/athena/
+    Questions.QuestionFive.QuestionFive.questionFive(spark, commonCrawlDF)
+    Questions.QuestionTwo.QuestionTwo.questionTwo(spark, Q2DF)
 
 
     if(RUN_ON_EMR) {
