@@ -90,3 +90,27 @@
 ## Contributors
 
 Revature Reston 210405 Big Data batch (April  2021- June 2021)
+
+## Presentation
+![image](https://user-images.githubusercontent.com/82099912/122787020-87231b00-d27a-11eb-88e3-9d9f1431a419.png)
+![image](https://user-images.githubusercontent.com/82099912/122787097-9a35eb00-d27a-11eb-8a64-c242a58766b7.png)
+![image](https://user-images.githubusercontent.com/82099912/122787269-c81b2f80-d27a-11eb-9079-4de0bbb865a1.png)
+![image](https://user-images.githubusercontent.com/82099912/122787302-d0736a80-d27a-11eb-9078-6a60e0525914.png)
+![image](https://user-images.githubusercontent.com/82099912/122787359-df5a1d00-d27a-11eb-9ec4-3bcebee60a02.png)
+![image](https://user-images.githubusercontent.com/82099912/122787409-ec770c00-d27a-11eb-9b52-83a310635e47.png)
+![image](https://user-images.githubusercontent.com/82099912/122787449-f6990a80-d27a-11eb-8337-c099547811ce.png)
+![image](https://user-images.githubusercontent.com/82099912/122787488-00227280-d27b-11eb-9c35-ac46c9adf879.png)
+![image](https://user-images.githubusercontent.com/82099912/122787542-0d3f6180-d27b-11eb-8fe6-ca453dcdd0ea.png)
+![image](https://user-images.githubusercontent.com/82099912/122787574-15979c80-d27b-11eb-90ad-6d793c5fcbee.png)
+![image](https://user-images.githubusercontent.com/82099912/122787614-1f210480-d27b-11eb-8d8b-d104f98cca9a.png)
+![image](https://user-images.githubusercontent.com/82099912/122787647-27793f80-d27b-11eb-91dc-a3b287beb20f.png)
+![image](https://user-images.githubusercontent.com/82099912/122787682-306a1100-d27b-11eb-85be-dd9dd24728cc.png)
+![image](https://user-images.githubusercontent.com/82099912/122787734-3cee6980-d27b-11eb-9117-7ee6f00fc1ae.png)
+![image](https://user-images.githubusercontent.com/82099912/122787775-45df3b00-d27b-11eb-85bf-a490ef6d4f04.png)
+![image](https://user-images.githubusercontent.com/82099912/122787799-4ed00c80-d27b-11eb-8269-76207406096e.png)
+![image](https://user-images.githubusercontent.com/82099912/122787827-55f71a80-d27b-11eb-9e6c-9a5cc206deda.png)
+![image](https://user-images.githubusercontent.com/82099912/122787910-6d360800-d27b-11eb-9ee3-624140e57a28.png)
+![image](https://user-images.githubusercontent.com/82099912/122787948-758e4300-d27b-11eb-98c7-0db408cfd898.png)
+![image](https://user-images.githubusercontent.com/82099912/122787984-7c1cba80-d27b-11eb-90ca-d744e1e2e8f1.png)
+![image](https://user-images.githubusercontent.com/82099912/122788019-83dc5f00-d27b-11eb-8db9-75d3120edd0a.png)
+
